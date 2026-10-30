@@ -70,6 +70,21 @@ class InputTest {
     }
 
     @Test
+    fun triggerAxisDrivesL2EvenWhenDigitalButtonIsAdvertised() {
+        // scrcpy's virtual pad: BTN_TL2/BTN_TR2 in its caps, but triggers only ever arrive as Z/RZ.
+        val scrcpy = xpad.copy(keys = xpad.keys + setOf(Ev.BTN_TL2, Ev.BTN_TR2),
+            abs = xpad.abs + mapOf(Ev.ABS_Z to AbsRange(0, 32767), Ev.ABS_RZ to AbsRange(0, 32767)))
+        val m = DeviceMapper(scrcpy)
+        assertTrue(events(m, Triple(Ev.ABS, Ev.ABS_RZ, 32767)).contains(ButtonChange(Button.R2, true)))
+        assertTrue(events(m, Triple(Ev.ABS, Ev.ABS_RZ, 0)).contains(ButtonChange(Button.R2, false)))
+        // A pad that does send the digital button: either source holds L2, released when both are.
+        assertEquals(listOf(ButtonChange(Button.L2, true)), events(m, Triple(Ev.KEY, Ev.BTN_TL2, 1)))
+        assertFalse(events(m, Triple(Ev.ABS, Ev.ABS_Z, 32767)).any { it is ButtonChange })
+        assertFalse(events(m, Triple(Ev.KEY, Ev.BTN_TL2, 0)).any { it is ButtonChange })
+        assertTrue(events(m, Triple(Ev.ABS, Ev.ABS_Z, 0)).contains(ButtonChange(Button.L2, false)))
+    }
+
+    @Test
     fun hidStylePadUsesZRzAsRightStick() {
         val caps = xpad.copy(abs = mapOf(Ev.ABS_X to trigger, Ev.ABS_Y to trigger, Ev.ABS_Z to trigger,
             Ev.ABS_RZ to trigger, Ev.ABS_GAS to trigger, Ev.ABS_BRAKE to trigger))

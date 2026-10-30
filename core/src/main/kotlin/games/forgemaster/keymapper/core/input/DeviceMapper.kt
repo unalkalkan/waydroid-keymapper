@@ -16,8 +16,9 @@ sealed class LogicalEvent {
  * Turns one controller's raw evdev events into logical buttons and axes.
  *
  * Default roles follow the Linux gamepad conventions; [ControllerConfig] can override axis roles,
- * button roles and calibration. Triggers without a digital button get a synthesized L2/R2 with
- * hysteresis, and a hat switch becomes the four D-pad buttons.
+ * button roles and calibration. Trigger axes also drive L2/R2 (with hysteresis), OR-ed with any
+ * digital L2/R2: some pads advertise BTN_TL2/BTN_TR2 and never send them (scrcpy's virtual pad).
+ * A hat switch becomes the four D-pad buttons.
  *
  * [onEvent] and [reset] are synchronized: the helper's reader thread feeds events while policy
  * changes (deselecting a pad, new calibration) reset the mapper from other threads.
@@ -27,8 +28,6 @@ class DeviceMapper(caps: DeviceCaps, config: ControllerConfig? = null) {
     private val buttonByCode: Map<Int, Button>
     private val ranges: Map<Int, AbsRange> = caps.abs
     private val calibration: Map<Int, AxisCalibration> = config?.calibration ?: emptyMap()
-    private val synthL2: Boolean
-    private val synthR2: Boolean
 
     private val digital = EnumSet.noneOf(Button::class.java) // from KEY events
     private val synthesized = EnumSet.noneOf(Button::class.java) // from hats and triggers
@@ -61,9 +60,6 @@ class DeviceMapper(caps: DeviceCaps, config: ControllerConfig? = null) {
         val buttons = HashMap(DEFAULT_BUTTONS)
         config?.buttonMap?.let { buttons.putAll(it) }
         buttonByCode = buttons
-
-        synthL2 = Axis.LT in roles && buttonByCode.none { it.value == Button.L2 && it.key in caps.keys }
-        synthR2 = Axis.RT in roles && buttonByCode.none { it.value == Button.R2 && it.key in caps.keys }
     }
 
     @Synchronized
@@ -83,8 +79,8 @@ class DeviceMapper(caps: DeviceCaps, config: ControllerConfig? = null) {
                     if (abs(v - axisValues[axis.ordinal]) < 0.0005f) return
                     axisValues[axis.ordinal] = v
                     emit(LogicalEvent.AxisChange(axis, v))
-                    if (axis == Axis.LT && synthL2) triggerButton(Button.L2, v, emit)
-                    if (axis == Axis.RT && synthR2) triggerButton(Button.R2, v, emit)
+                    if (axis == Axis.LT) triggerButton(Button.L2, v, emit)
+                    if (axis == Axis.RT) triggerButton(Button.R2, v, emit)
                 }
             }
         }
