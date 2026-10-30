@@ -1,0 +1,36 @@
+{
+  "format": "keymapper-profile",
+  "profile": {
+    "id": "mobile-legends",
+    "name": "Mobile Legends",
+    "grab": true,
+    "phases": [
+      {
+        "name": "Battle",
+        "controls": [
+          {"type": "joystick", "id": "move", "x": 0.1224, "y": 0.7852, "stick": "LEFT", "radius": 0.14},
+          {"type": "button", "id": "attack", "x": 0.9125, "y": 0.838, "buttons": ["A"], "mode": "HOLD", "label": "Attack", "size": 0.09},
+          {"type": "button", "id": "skill1", "x": 0.7641, "y": 0.8722, "buttons": ["X"], "mode": "HOLD", "label": "Skill 1", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.15},
+          {"type": "button", "id": "skill2", "x": 0.8214, "y": 0.6852, "buttons": ["Y"], "mode": "HOLD", "label": "Skill 2", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.15},
+          {"type": "button", "id": "skill3", "x": 0.9255, "y": 0.588, "buttons": ["B"], "mode": "HOLD", "label": "Ultimate", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.15},
+          {"type": "button", "id": "skill1up", "x": 0.7135, "y": 0.7843, "buttons": ["L2", "X"], "mode": "TAP", "label": "Skill 1 +", "size": 0.03},
+          {"type": "button", "id": "skill2up", "x": 0.7708, "y": 0.5972, "buttons": ["L2", "Y"], "mode": "TAP", "label": "Skill 2 +", "size": 0.03},
+          {"type": "button", "id": "skill3up", "x": 0.875, "y": 0.5, "buttons": ["L2", "B"], "mode": "TAP", "label": "Ult +", "size": 0.03},
+          {"type": "button", "id": "spell", "x": 0.6677, "y": 0.8907, "buttons": ["R1"], "mode": "HOLD", "label": "Spell", "size": 0.045, "aim": "RIGHT", "aimRadius": 0.15},
+          {"type": "button", "id": "buyitem", "x": 0.8984, "y": 0.1454, "buttons": ["R2"], "mode": "TAP", "label": "Buy item", "size": 0.035},
+          {"type": "button", "id": "recall", "x": 0.5104, "y": 0.8889, "buttons": ["L3"], "mode": "TAP", "label": "Recall", "size": 0.045},
+          {"type": "button", "id": "regen", "x": 0.5896, "y": 0.8889, "buttons": ["R3"], "mode": "TAP", "label": "Regen", "size": 0.045},
+          {"type": "button", "id": "shop", "x": 0.9583, "y": 0.0435, "buttons": ["START"], "mode": "TAP", "label": "Shop", "size": 0.03},
+          {"type": "phase", "id": "pause", "x": 0.97, "y": 0.2, "buttons": ["SELECT"], "action": "NEXT"}
+        ]
+      },
+      {
+        "name": "Paused",
+        "controls": [
+          {"type": "phase", "id": "resume", "x": 0.97, "y": 0.2, "buttons": ["SELECT"], "action": "NEXT"}
+        ]
+      }
+    ]
+  },
+  "games": ["com.mobile.legends"]
+}

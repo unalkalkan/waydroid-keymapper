@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Runs the helper's CLI on the device. Examples:
+#   scripts/kmctl status
+#   scripts/kmctl tap 640 400
+#   scripts/kmctl load docs/examples/demo-profile.json     (host file; pushed first)
+#   scripts/kmctl key A press
+#   scripts/kmctl monitor 15
+set -euo pipefail
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+DIR=/data/local/tmp/keymapper
+ADB=${ADB:-$(command -v adb || true)}
+[ -x "${ADB:-}" ] || ADB="$ROOT/.sdk/platform-tools/adb"
+A=("$ADB")
+[ -n "${ANDROID_SERIAL:-}" ] && A+=(-s "$ANDROID_SERIAL")
+if [ "${1:-}" = load ] && [ -f "${2:-}" ]; then
+    "${A[@]}" push "$2" "$DIR/cli-profile.json" >/dev/null
+    "${A[@]}" shell "chmod 600 $DIR/cli-profile.json"
+    shift 2
+    set -- load "$DIR/cli-profile.json" "$@"
+fi
+cmd="CLASSPATH=$DIR/helper.apk app_process /system/bin games.forgemaster.keymapper.helper.Cli"
+for a in "$@"; do cmd+=" '${a//\'/}'"; done
+"${A[@]}" shell "$cmd" | tr -d '\r'

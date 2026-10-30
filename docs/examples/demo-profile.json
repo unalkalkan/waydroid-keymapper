@@ -1,0 +1,30 @@
+{
+  "format": "keymapper-profile",
+  "profile": {
+    "id": "demo",
+    "name": "Demo",
+    "phases": [
+      {
+        "name": "Main",
+        "controls": [
+          { "type": "button", "id": "a", "x": 0.1133, "y": 0.569, "buttons": ["A"], "mode": "TAP", "label": "A" },
+          { "type": "button", "id": "b", "x": 0.1133, "y": 0.444, "buttons": ["B"], "label": "B" },
+          { "type": "button", "id": "rapid", "x": 0.6, "y": 0.2, "buttons": ["R1"], "mode": "RAPID", "rapidHz": 8, "label": "RB" },
+          { "type": "button", "id": "chord", "x": 0.6, "y": 0.35, "buttons": ["L1", "Y"], "label": "LB+Y" },
+          { "type": "joystick", "id": "move", "x": 0.25, "y": 0.7, "stick": "LEFT", "radius": 0.15 },
+          { "type": "look", "id": "cam", "x": 0.75, "y": 0.55, "stick": "RIGHT", "radius": 0.2, "sensitivity": 1.0 },
+          { "type": "phase", "id": "next", "x": 0.95, "y": 0.06, "buttons": ["SELECT"], "action": "NEXT" }
+        ]
+      },
+      {
+        "name": "Menu",
+        "controls": [
+          { "type": "button", "id": "ok", "x": 0.5, "y": 0.5, "buttons": ["A"], "label": "OK" },
+          { "type": "joystick", "id": "cursor", "x": 0.5, "y": 0.5, "stick": "DPAD", "radius": 0.1, "eightWay": true },
+          { "type": "phase", "id": "back", "x": 0.95, "y": 0.06, "buttons": ["SELECT"], "action": "NEXT" }
+        ]
+      }
+    ]
+  },
+  "games": []
+}

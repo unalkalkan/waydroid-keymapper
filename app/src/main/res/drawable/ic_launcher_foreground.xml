@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple gamepad silhouette; drawn for this project. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M38,40 L70,40 A12,12 0 0,1 81.6,49 L86,68 A7,7 0 0,1 74,74.5 L67,66 L41,66 L34,74.5 A7,7 0 0,1 22,68 L26.4,49 A12,12 0 0,1 38,40 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M37,47 L41,47 L41,51 L45,51 L45,55 L41,55 L41,59 L37,59 L37,55 L33,55 L33,51 L37,51 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M67,50 A3,3 0 1,0 73,50 A3,3 0 1,0 67,50 Z M73,56 A3,3 0 1,0 79,56 A3,3 0 1,0 73,56 Z M61,56 A3,3 0 1,0 67,56 A3,3 0 1,0 61,56 Z M67,62 A3,3 0 1,0 73,62 A3,3 0 1,0 67,62 Z" />
+</vector>
