@@ -19,7 +19,7 @@
           {"type": "button", "id": "spell", "x": 0.6677, "y": 0.8907, "buttons": ["R1"], "mode": "HOLD", "label": "Spell", "size": 0.045, "aim": "RIGHT", "aimRadius": 0.15},
           {"type": "button", "id": "buyitem", "x": 0.8984, "y": 0.1454, "buttons": ["R2"], "mode": "TAP", "label": "Buy item", "size": 0.035},
           {"type": "button", "id": "recall", "x": 0.5104, "y": 0.8889, "buttons": ["L3"], "mode": "TAP", "label": "Recall", "size": 0.045},
-          {"type": "button", "id": "regen", "x": 0.5896, "y": 0.8889, "buttons": ["R3"], "mode": "TAP", "label": "Regen", "size": 0.045},
+          {"type": "button", "id": "regen", "x": 0.5896, "y": 0.8889, "buttons": ["L1"], "mode": "TAP", "label": "Regen", "size": 0.045},
           {"type": "button", "id": "shop", "x": 0.9583, "y": 0.0435, "buttons": ["START"], "mode": "TAP", "label": "Shop", "size": 0.03},
           {"type": "phase", "id": "pause", "x": 0.97, "y": 0.2, "buttons": ["SELECT"], "action": "NEXT"}
         ]

@@ -79,7 +79,7 @@ adb logcat -s KmTouchTest                              # every MotionEvent the s
 - `demo-profile.json`: every control type across two phases, for the touch-test screen.
 - `mobile-legends.json`: Mobile Legends: Bang Bang on an Xbox-layout pad. Left stick moves; A
   attacks; X/Y/B/RB cast (hold, aim with the right stick, release to fire); LT + X/Y/B upgrades a
-  skill; RT buys the recommended item; L3/R3 recall and regen; Start opens the shop.
+  skill; RT buys the recommended item; L3 recalls; LB regens; Start opens the shop.
 
 ## Status
 
