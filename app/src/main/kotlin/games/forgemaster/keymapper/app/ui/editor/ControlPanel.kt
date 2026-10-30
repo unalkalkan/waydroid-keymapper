@@ -162,7 +162,10 @@ private fun ButtonFields(c: ButtonControl, onChange: (Control) -> Unit, onLearn:
         }
         if (c.aim != null) {
             LabeledSlider("Aim distance", c.aimRadius, 0.02f..0.5f, { "${(it * 100).roundToInt()}%" }) {
-                onChange(c.copy(aimRadius = it))
+                onChange(c.copy(aimRadius = it, aimMin = c.aimMin.coerceAtMost(it)))
+            }
+            LabeledSlider("Aim start", c.aimMin, 0f..c.aimRadius, { "${(it * 100).roundToInt()}%" }) {
+                onChange(c.copy(aimMin = it))
             }
         }
     }

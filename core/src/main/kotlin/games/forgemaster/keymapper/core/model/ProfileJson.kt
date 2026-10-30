@@ -70,6 +70,7 @@ fun Profile.sanitized(): Profile {
                         x = x, y = y, buttons = c.buttons.sanitizedChord(), label = c.label.take(12),
                         rapidHz = c.rapidHz.clamp(ButtonControl.MIN_RAPID_HZ, ButtonControl.MAX_RAPID_HZ),
                         size = c.size.clamp(0.015f, 0.2f), aimRadius = c.aimRadius.clamp(0.02f, 0.5f),
+                        aimMin = c.aimMin.clamp(0f, c.aimRadius.clamp(0.02f, 0.5f)),
                     )
                     is JoystickControl -> c.copy(
                         x = x, y = y, radius = c.radius.clamp(0.02f, 0.5f), response = c.response.sanitized(),

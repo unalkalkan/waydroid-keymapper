@@ -62,6 +62,11 @@ data class ButtonControl(
     val aim: Stick? = null,
     /** Drag distance at full [aim] deflection, fraction of the shorter side. */
     val aimRadius: Float = 0.15f,
+    /**
+     * Drag distance as soon as [aim] leaves its deadzone, fraction of the shorter side, for games
+     * that ignore short drags (Brawl Stars fires auto-aimed below ~5%).
+     */
+    val aimMin: Float = 0f,
 ) : Control() {
     override fun at(x: Float, y: Float) = copy(x = x, y = y)
 

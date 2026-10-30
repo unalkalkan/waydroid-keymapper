@@ -282,6 +282,7 @@ class MappingEngine(
         private val rapidHalfPeriod =
             (500_000_000.0 / c.rapidHz.coerceIn(ButtonControl.MIN_RAPID_HZ, ButtonControl.MAX_RAPID_HZ)).toLong()
         private val aimRadius = c.aimRadius * screen.shortSide
+        private val aimMin = c.aimMin.coerceIn(0f, c.aimRadius) * screen.shortSide
         private var aimArmedUntil: Long? = null
         private var aimSettleAt: Long? = null
 
@@ -307,9 +308,11 @@ class MappingEngine(
             if (!finger.down || aimArmedUntil != null) return
             val raw = stickVector(stick)
             val v = if (stick == Stick.DPAD) raw else StickMath.apply(raw, AIM_RESPONSE)
+            val len = v.length
+            val reach = if (len > 0f) (aimMin + len * (aimRadius - aimMin)) / len else 0f
             val bx = finger.x
             val by = finger.y
-            finger.move(px + v.x * aimRadius, py + v.y * aimRadius)
+            finger.move(px + v.x * reach, py + v.y * reach)
             if (finger.x != bx || finger.y != by) aimSettleAt = now + SETTLE_NS
         }
 

@@ -154,6 +154,18 @@ class EngineTest {
     }
 
     @Test
+    fun aimStartsAtItsMinimumDistance() {
+        load(ButtonControl("shot", 0.5f, 0.5f, listOf(Button.R2), aim = Stick.RIGHT, aimRadius = 0.2f, aimMin = 0.1f))
+        engine.onButton(Button.R2, true, 0)
+        engine.tick(17 * ms)
+        assertEquals(listOf(PointerChange(0, DOWN, 500f, 250f)), take()) // centred stick: stays on the button
+        engine.onAxis(Axis.RX, 0.2f, 20 * ms) // just past the deadzone: jumps past the minimum, 0.1 * 500 px
+        assertTrue(take().single().x in 550f..560f)
+        engine.onAxis(Axis.RX, 1f, 30 * ms) // full deflection still reaches aimRadius
+        assertEquals(listOf(PointerChange(0, MOVE, 600f, 250f)), take())
+    }
+
+    @Test
     fun simultaneousButtonsGetDistinctPointers() {
         load(button(id = "a"), ButtonControl("b", 0.1f, 0.1f, listOf(Button.B)))
         engine.onButton(Button.A, true, 0)
