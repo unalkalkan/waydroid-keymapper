@@ -60,6 +60,44 @@ Gamepads on Waydroid: plug the pad into the host; with `persist.waydroid.uevent=
 as `/dev/input/eventN` inside the container (`adb shell ls /dev/input`). The helper grabs it only
 while a profile is mapping (or while learning), so it works normally in Android menus otherwise.
 
+## Playing from a PC with scrcpy
+
+A controller plugged into the PC can drive a game on a USB-connected phone through
+[scrcpy](https://github.com/Genymobile/scrcpy) ≥ 2.7, which forwards PC gamepads to the device as
+virtual HID pads (`Microsoft X-Box 360 Pad`, 045e:028e). The helper treats them like any physical pad.
+
+```sh
+export ANDROID_SERIAL=<serial>          # `adb devices`
+./scripts/deploy.sh
+scrcpy -G --no-mouse-hover              # -G = --gamepad=uhid
+```
+
+Lowest latency measured on a Samsung SM-G770F (Snapdragon 855, Android 13) over USB, with
+VA-API decoding on the PC:
+
+```sh
+scrcpy -G --no-mouse-hover -m 1600 -b 16M -S -w \
+    --video-codec-options=vendor.qti-ext-enc-low-latency.enable=1
+```
+
+Phone capture → frame drawn on the PC: 22 ms median / 30 ms p90, against 38 / 51 ms with the
+defaults. `-m 1600` saves ~13 ms (1280 is no faster, 1920 costs ~9 ms), the Qualcomm low-latency
+flag ~2 ms, VA-API vs software decoding ~6 ms; H.265, 16M bitrate and `-S` (phone screen off)
+made no difference. Controller input is negligible next to that: PC pad → pad event on the phone
+2.5 ms, pad event → keymapper touch 1.2 ms (medians).
+
+- `--no-mouse-hover`: on Android ≤ 13, mouse events from scrcpy cancel held fingers (see Known
+  gaps). Don't click in the scrcpy window during a match.
+- Green lines in the scrcpy window (NVIDIA, KDE Wayland): scrcpy ≥ 5 forces EGL, which NVIDIA
+  doesn't offer under XWayland, so SDL falls back to its Vulkan renderer, which garbles the
+  video. Run scrcpy as `SDL_VIDEO_DRIVER=wayland scrcpy …`; its log should say
+  `Renderer: opengl`.
+- Frozen window with `VA-API: could not import DMA-BUF as EGLImage`: nvidia-vaapi-driver 0.0.13
+  (Debian 13) misreads NVIDIA ≥ 575 drivers and exports a wrong DMA-BUF modifier. Add
+  `--hwdec=disabled`, or use nvidia-vaapi-driver ≥ 0.0.14.
+- scrcpy's pad never sends the digital `BTN_TL2`/`BTN_TR2` it advertises; L2/R2 come from the
+  trigger axes like on every other pad.
+
 ## Testing without a controller
 
 ```sh
@@ -80,6 +118,11 @@ adb logcat -s KmTouchTest                              # every MotionEvent the s
 - `mobile-legends.json`: Mobile Legends: Bang Bang on an Xbox-layout pad. Left stick moves; A
   attacks; X/Y/B/RB cast (hold, aim with the right stick, release to fire); LT + X/Y/B upgrades a
   skill; RT buys the recommended item; L3 recalls; LB regens; Start opens the shop.
+- `brawl-stars.json`: Brawl Stars, laid out like the Mobile Legends profile. Left stick moves; A
+  attacks and X casts the Super (tap = auto-aim, or hold and aim with the right stick); RT/LT do
+  the same while leaving the thumb on the right stick, release to fire; Y/RB gadget; B/LB
+  Hypercharge; Start opens quick chat. Aimed controls use `aimMin`, because Brawl Stars treats a
+  drag under ~5% of the screen height as a tap and fires auto-aimed.
 
 ## Status
 
@@ -92,14 +135,15 @@ adb logcat -s KmTouchTest                              # every MotionEvent the s
 | Engine: buttons, chords, sticks, curves, triggers, D-pad, aimed buttons, phases, hot reload | Unit tests and on-device touch logs |
 | HUD, phase switching, foreground auto-switch | Verified |
 | Physical pad | Xbox One S pad on Waydroid: probe, grab and mapping verified in a real match |
+| uinput backend, scrcpy pads | Samsung SM-G770F (Android 13): uinput touches, PC pad via `scrcpy -G`, every button and axis |
 | Calibration UI, haptics, curve editor | Built; curve editor verified; calibration and rumble untested |
 
 ## Known gaps / next steps
 
 - Rumble and calibration are untested on a physical pad. `kmpad` (needs root) provides a virtual
   pad for testing without one.
-- uinput emit path (preferred on phones) is untested; `deploy.sh --backend inputmanager` forces
-  the proven path.
+- uinput emit path is verified on one phone only; `deploy.sh --backend inputmanager` forces the
+  InputManager path if a device misbehaves.
 - Real touches and injected touches come from different input devices; Android ≤ 13 keeps one touch
   stream per display, so a gesture or even a mouse hover from another device (on Waydroid: moving
   the host mouse over the window) cancels ours and drops its later events. The InputManager emitter
