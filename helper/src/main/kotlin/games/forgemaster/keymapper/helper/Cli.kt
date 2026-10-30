@@ -195,21 +195,28 @@ object Cli {
                 val f = c.read() ?: return
                 if (f.type == MsgType.PONG) return
             }
-        } catch (_: java.net.SocketTimeoutException) {
-        } catch (_: java.io.InterruptedIOException) {
+        } catch (_: java.io.IOException) {
+            // Timed out. Some builds (Samsung, Android 13) report an expired SO_RCVTIMEO on a
+            // LocalSocket as a plain IOException ("Try again") rather than SocketTimeoutException.
         }
     }
 
     private fun monitor(c: HelperConnection, seconds: Long) {
         c.send(MsgType.SET_MONITOR, SetMonitor.serializer(), SetMonitor(true))
-        val end = System.currentTimeMillis() + seconds * 1000
-        c.setReadTimeout(250)
-        while (System.currentTimeMillis() < end) {
-            val f = try {
-                c.read() ?: break
-            } catch (_: java.io.InterruptedIOException) {
-                continue
+        // No read timeout (see sync): a timer turns monitoring off and its PONG ends the loop.
+        Thread {
+            Thread.sleep(seconds * 1000)
+            try {
+                c.send(MsgType.SET_MONITOR, SetMonitor.serializer(), SetMonitor(false))
+                c.send(MsgType.PING)
+            } catch (_: java.io.IOException) {
             }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+        while (true) {
+            val f = c.read() ?: break
             when (f.type) {
                 MsgType.RAW_EVENT -> Wire.decode(RawEvent.serializer(), f).let {
                     println("raw   pad=${it.device} type=${it.type} code=0x%03x value=${it.value}".format(it.code))
@@ -217,9 +224,9 @@ object Cli {
                 MsgType.LOGICAL_EVENT -> Wire.decode(LogicalInput.serializer(), f).let {
                     println("input pad=${it.device} ${it.button ?: it.axis} = ${"%.3f".format(it.value)}")
                 }
+                MsgType.PONG -> break
             }
         }
-        c.send(MsgType.SET_MONITOR, SetMonitor.serializer(), SetMonitor(false))
     }
 
     private fun fail(msg: String): Nothing {
