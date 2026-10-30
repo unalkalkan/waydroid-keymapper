@@ -1,5 +1,6 @@
 package games.forgemaster.keymapper.helper.client
 
+import android.os.ParcelFileDescriptor
 import games.forgemaster.keymapper.core.engine.Screen
 import games.forgemaster.keymapper.core.protocol.ErrorMsg
 import games.forgemaster.keymapper.core.protocol.Hello
@@ -18,10 +19,15 @@ import games.forgemaster.keymapper.core.protocol.Status
 import games.forgemaster.keymapper.core.protocol.TouchCmd
 import games.forgemaster.keymapper.core.protocol.Wire
 import kotlinx.serialization.KSerializer
+import java.io.IOException
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 /**
  * Keeps one authenticated connection to the helper alive, reconnecting with backoff, and delivers
- * helper messages to [listener] on its own background thread.
+ * helper messages to [listener] on its own background thread. It dials the helper's abstract
+ * socket, or takes a socket the helper hands over through [offer] (the only way in on stock Android,
+ * where SELinux won't let an app connect to a socket owned by adb shell).
  */
 class HelperClient(
     private val client: String,
@@ -42,6 +48,7 @@ class HelperClient(
     @Volatile private var connection: HelperConnection? = null
     @Volatile private var lastReason: String? = null
     private var thread: Thread? = null
+    private val offers = LinkedBlockingQueue<ParcelFileDescriptor>()
 
     val isConnected: Boolean get() = connection != null
     val hello: Hello? get() = connection?.hello
@@ -62,6 +69,12 @@ class HelperClient(
         connection?.close()
         thread?.interrupt()
         thread = null
+        while (true) closeQuietly(offers.poll() ?: break)
+    }
+
+    /** A connected socket from the helper; used for the next connection attempt. Takes ownership. */
+    fun offer(fd: ParcelFileDescriptor) {
+        if (!running || connection != null) closeQuietly(fd) else offers.offer(fd)
     }
 
     /** Drops the current connection so the loop reconnects immediately (e.g. after re-pairing). */
@@ -95,15 +108,20 @@ class HelperClient(
 
     private fun loop() {
         var backoff = 500L
+        var handed: ParcelFileDescriptor? = null
         while (running) {
             val p = pairing()
             if (p == null) {
+                handed?.let(::closeQuietly)
+                handed = null
                 disconnected("not paired")
                 sleep(2000)
                 continue
             }
             try {
-                val c = HelperConnection.open(p, client)
+                val fd = handed ?: offers.poll()
+                handed = null
+                val c = if (fd != null) HelperConnection.adopt(fd, p, client) else HelperConnection.open(p, client)
                 connection = c
                 lastReason = null
                 backoff = 500L
@@ -111,14 +129,31 @@ class HelperClient(
                 readLoop(c)
                 disconnected("helper closed the connection")
             } catch (e: Exception) {
-                disconnected(e.message ?: e.javaClass.simpleName)
+                disconnected(reason(e))
             } finally {
                 connection?.close()
                 connection = null
             }
             if (!running) break
-            sleep(backoff)
+            handed = try {
+                offers.poll(backoff, TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                null
+            }
             backoff = (backoff * 2).coerceAtMost(5000L)
+        }
+        handed?.let(::closeQuietly)
+    }
+
+    /** EACCES on connect: a helper is listening but SELinux keeps apps off it; it hands a socket over instead. */
+    private fun reason(e: Exception): String =
+        if (e is IOException && e.message?.contains("Permission denied") == true) "waiting for the helper to connect"
+        else e.message ?: e.javaClass.simpleName
+
+    private fun closeQuietly(fd: ParcelFileDescriptor) {
+        try {
+            fd.close()
+        } catch (_: IOException) {
         }
     }
 

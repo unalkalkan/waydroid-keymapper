@@ -24,6 +24,7 @@ Probed on 2026-10-30 over adb (shell uid 2000):
 | Helper files live in `/data/local/tmp/keymapper` (0700, files 0600, `MANIFEST.sha256` checked on every start, `setsid`, PID file). The classpath file `helper.apk` is the app APK itself (or `keymapperd.jar` with `--standalone`) | One artifact for app + helper keeps versions in step; the root activator can install from the app's own APK. |
 | The app generates the HMAC key and socket name; `content://…pairing/config` answers only uid 0/2000; `deploy.sh` copies them into `helper.conf` (0600) | The key never appears in argv or on shared storage. An app-readable file would conflict with the 0700 directory, and SELinux on real phones blocks apps from reading `/data/local/tmp` anyway. |
 | Foreground detection runs in the helper (`ActivityTaskManager.getTasks` over binder, `dumpsys` fallback), not through `UsageStatsManager` in the app | The helper already has the rights, so no usage-access grant is needed, and auto-switch keeps working if the app process dies. Mapping without the helper is impossible anyway. |
+| The app dials an abstract socket, and on stock Android the helper hands it a connected socket pair through the app's provider instead | Phone SELinux policy (checked on a Samsung SM-G770F, Android 13) gives `untrusted_app` binder calls, `fd use` and read/write on `shell` sockets but not `connectto`; Waydroid allows the connect. Handing over a socket keeps one protocol, one handshake and no `INTERNET` permission. |
 | Frames are `u32 len \| u8 type \| JSON` | Both ends are JVM; kotlinx-serialization gives versionable messages for free. Hot paths are tiny. |
 | Room stores each profile as a JSON column | Profiles are documents; the same JSON is the export format. |
 | The editor is a screenshot/grid editor at the display's aspect, not a live overlay | Simpler to build first; the overlay editor is listed under next steps in the README. |
@@ -39,8 +40,10 @@ pad. The HUD hides itself over Keymapper's own screens.
 app (uid 10xxx)                       helper "keymapperd" (uid 2000, app_process)
  Compose UI, Room, HUD service         km-ipc-accept   SO_PEERCRED check → per-client thread
  HelperRepository ── abstract ──────▶  km-ipc-<pid>    handshake, decode, post to engine
-   (HelperClient, reconnects)  socket  km-engine       MappingEngine + Emitter (single owner)
- PairingProvider (uid 0/2000 only)     km-pad-<n>      evdev read → DeviceMapper → engine
+   (HelperClient, reconnects)  socket  km-ipc-handover same, on a handed-over socket pair
+ PairingProvider (uid 0/2000 only) ◀── km-app-link     app running, no session → call("connect", fd)
+                                       km-engine       MappingEngine + Emitter (single owner)
+                                       km-pad-<n>      evdev read → DeviceMapper → engine
                                        km-scan         /dev/input hotplug (1 s)
                                        km-watch        display + foreground (1 s)
                                        km-signal       SIGTERM/INT/HUP → clean shutdown

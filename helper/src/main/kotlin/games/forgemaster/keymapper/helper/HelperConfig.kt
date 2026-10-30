@@ -24,6 +24,12 @@ object HelperPaths {
     const val CLI_CLASS = "games.forgemaster.keymapper.helper.Cli"
     const val APP_PACKAGE = "games.forgemaster.keymapper"
     const val SHELL_UID = 2000
+
+    /** The app's PairingProvider: `content query` for pairing, `call("connect")` for a handed-over socket. */
+    const val PROVIDER_AUTHORITY = "games.forgemaster.keymapper.pairing"
+    const val CONNECT_METHOD = "connect"
+    const val CONNECT_EXTRA_FD = "fd"
+    const val CONNECT_EXTRA_OK = "ok"
 }
 
 /** `helper.conf`: key=value lines. The key never leaves this file, the app's private storage or adb. */

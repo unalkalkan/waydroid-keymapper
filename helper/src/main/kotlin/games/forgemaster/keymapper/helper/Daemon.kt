@@ -43,6 +43,7 @@ class Daemon(private val config: HelperConfig) : IpcServer.Dispatcher {
     private lateinit var emitter: Emitter
     private lateinit var devices: DeviceManager
     private lateinit var ipc: IpcServer
+    private lateinit var appLink: AppLink
 
     // Engine-thread state.
     private var profiles: Map<String, Profile> = emptyMap()
@@ -89,6 +90,7 @@ class Daemon(private val config: HelperConfig) : IpcServer.Dispatcher {
         )
         ipc = IpcServer(server, config, this)
         ipc.start()
+        appLink = AppLink(config, ipc).also { it.start() }
         devices.start()
         startWatcher()
         L.i("ready on @${config.socketName} (app uid ${config.appUid})")
@@ -102,6 +104,7 @@ class Daemon(private val config: HelperConfig) : IpcServer.Dispatcher {
         runSafely { engine.setEnabled(false, now()) }
         runSafely { emitter.close() }
         devices.stop()
+        appLink.stop()
         ipc.close()
     }
 

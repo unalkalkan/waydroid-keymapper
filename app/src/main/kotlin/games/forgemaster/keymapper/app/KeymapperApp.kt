@@ -25,6 +25,10 @@ class KeymapperApp : Application() {
 
     companion object {
         fun graph(context: Context): AppGraph = (context.applicationContext as KeymapperApp).graph
+
+        /** Null before Application.onCreate, which a provider call can beat while the process starts. */
+        fun graphOrNull(context: Context): AppGraph? =
+            (context.applicationContext as? KeymapperApp)?.takeIf { it::graph.isInitialized }?.graph
     }
 }
 

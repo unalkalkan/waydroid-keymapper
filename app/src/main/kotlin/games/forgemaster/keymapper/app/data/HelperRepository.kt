@@ -1,5 +1,6 @@
 package games.forgemaster.keymapper.app.data
 
+import android.os.ParcelFileDescriptor
 import games.forgemaster.keymapper.core.model.Axis
 import games.forgemaster.keymapper.core.model.Button
 import games.forgemaster.keymapper.core.model.Stick
@@ -144,6 +145,9 @@ class HelperRepository(
 
     /** Drop and redo the connection, e.g. after the pairing key changed. */
     fun reconnect() = client.reconnect()
+
+    /** A connected socket the helper handed over (see PairingProvider.call). */
+    fun offer(fd: ParcelFileDescriptor) = client.offer(fd)
 
     fun nextPhase(delta: Int = 1) = sender.execute { client.setPhase(delta = delta) }
 

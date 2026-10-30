@@ -136,6 +136,7 @@ adb logcat -s KmTouchTest                              # every MotionEvent the s
 | HUD, phase switching, foreground auto-switch | Verified |
 | Physical pad | Xbox One S pad on Waydroid: probe, grab and mapping verified in a real match |
 | uinput backend, scrcpy pads | Samsung SM-G770F (Android 13): uinput touches, PC pad via `scrcpy -G`, every button and axis |
+| App ↔ helper on stock Android | SELinux blocks apps from connecting to the shell-owned socket; the helper hands the app a socket pair through its provider instead (`docs/PROTOCOL.md`). Verified on the SM-G770F, including app kill/relaunch (~1 s) and helper restarts |
 | Calibration UI, haptics, curve editor | Built; curve editor verified; calibration and rumble untested |
 
 ## Known gaps / next steps

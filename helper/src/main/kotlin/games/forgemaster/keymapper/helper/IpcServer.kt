@@ -12,10 +12,12 @@ import games.forgemaster.keymapper.core.protocol.Hello
 import games.forgemaster.keymapper.core.protocol.MsgType
 import games.forgemaster.keymapper.core.protocol.PROTOCOL_VERSION
 import games.forgemaster.keymapper.core.protocol.Wire
+import games.forgemaster.keymapper.helper.client.SocketStream
 import kotlinx.serialization.KSerializer
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
+import java.io.FileDescriptor
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -23,7 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Abstract-namespace socket server. A peer is served only if the kernel-reported uid (SO_PEERCRED)
  * is the paired app, root, or the helper's own uid, and only after it proves the shared key.
- * Anything else is closed without a reply.
+ * Anything else is closed without a reply. [adopt] serves a socket the helper handed to the app
+ * itself (see [AppLink]); the same key proof applies.
  */
 class IpcServer(
     private val server: LocalServerSocket,
@@ -36,11 +39,11 @@ class IpcServer(
         fun onSessionClosed(session: Session)
     }
 
-    inner class Session(private val socket: LocalSocket, val uid: Int, val pid: Int) {
+    inner class Session(private val stream: SocketStream, val uid: Int, val pid: Int) {
         val id = ids.incrementAndGet()
         @Volatile var client: String = "?"
         @Volatile var monitor = false
-        private val out = BufferedOutputStream(socket.outputStream)
+        private val out = BufferedOutputStream(stream.output)
         private val writeLock = Any()
 
         fun send(type: Int, payload: ByteArray = ByteArray(0)): Boolean = try {
@@ -53,18 +56,9 @@ class IpcServer(
 
         fun <T> send(type: Int, serializer: KSerializer<T>, value: T) = send(type, Wire.encode(serializer, value))
 
-        fun close() {
-            try {
-                socket.shutdownInput()
-            } catch (_: IOException) {
-            }
-            try {
-                socket.close()
-            } catch (_: IOException) {
-            }
-        }
+        fun close() = stream.close()
 
-        override fun toString() = "session $id ($client, uid $uid, pid $pid)"
+        override fun toString() = "session $id ($client, uid $uid, ${if (pid > 0) "pid $pid" else "handed over"})"
     }
 
     private val ids = AtomicInteger()
@@ -77,6 +71,20 @@ class IpcServer(
             isDaemon = true
             start()
         }
+    }
+
+    /** Serves one end of a socket pair whose other end went to [uid]. Takes ownership of [fd]. */
+    fun adopt(fd: FileDescriptor, uid: Int): Boolean {
+        val stream = SocketStream.of(fd) { Os.close(fd) }
+        if (!running || sessions.size >= MAX_SESSIONS) {
+            stream.close()
+            return false
+        }
+        Thread({ serve(stream, uid, 0) }, "km-ipc-handover").apply {
+            isDaemon = true
+            start()
+        }
+        return true
     }
 
     fun broadcast(type: Int, payload: ByteArray, monitorOnly: Boolean = false) {
@@ -121,19 +129,19 @@ class IpcServer(
                 closeQuietly(socket)
                 continue
             }
-            Thread({ serve(socket, cred.uid, cred.pid) }, "km-ipc-${cred.pid}").apply {
+            Thread({ serve(SocketStream.of(socket), cred.uid, cred.pid) }, "km-ipc-${cred.pid}").apply {
                 isDaemon = true
                 start()
             }
         }
     }
 
-    private fun serve(socket: LocalSocket, uid: Int, pid: Int) {
-        val session = Session(socket, uid, pid)
+    private fun serve(stream: SocketStream, uid: Int, pid: Int) {
+        val session = Session(stream, uid, pid)
         var opened = false
         try {
-            socket.soTimeout = HANDSHAKE_TIMEOUT_MS
-            val input = DataInputStream(BufferedInputStream(socket.inputStream))
+            stream.setReadTimeout(HANDSHAKE_TIMEOUT_MS)
+            val input = DataInputStream(BufferedInputStream(stream.input))
             val nonce = Handshake.newNonce()
             session.send(MsgType.HELLO, Hello.serializer(), Hello(PROTOCOL_VERSION, HelperVersion.NAME, nonce, Os.getpid(), myUid))
             val frame = FrameCodec.read(input) ?: return
@@ -145,7 +153,7 @@ class IpcServer(
                 return
             }
             session.send(MsgType.AUTH_OK, AuthOk.serializer(), AuthOk(Handshake.helperMac(config.key, nonce, auth.nonce)))
-            socket.soTimeout = 0
+            stream.setReadTimeout(0)
             session.client = auth.client.take(16)
             sessions.add(session)
             opened = true

@@ -11,6 +11,14 @@ else, on purpose.
   user), root (0), and its own uid (the CLI runs as the same shell user). Everything else is closed
   without a reply.
 - The client checks the server's `SO_PEERCRED` too and refuses a server that isn't uid 0 or 2000.
+- **Handover**, for stock Android: SELinux lets an app read and write a socket owned by the `shell`
+  domain but not `connectto` it, so the app's `connect()` fails with `EACCES`. While the app's main
+  process is running without a session, the helper creates a `socketpair(AF_UNIX, SOCK_STREAM)`,
+  serves one end like an accepted connection (as the paired app's uid) and passes the other to the
+  app: `IContentProvider.call("connect", extras{fd: ParcelFileDescriptor})` on
+  `games.forgemaster.keymapper.pairing`, after checking that provider belongs to the paired uid. The
+  provider accepts only uid 0/2000 callers and answers `{ok: false}` while the app is still
+  starting. The same handshake follows. The helper never starts the app to do this.
 
 ## Frames
 
