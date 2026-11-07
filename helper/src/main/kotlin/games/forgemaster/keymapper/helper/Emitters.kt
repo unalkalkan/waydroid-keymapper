@@ -163,7 +163,8 @@ class InputManagerEmitter : Emitter {
 
 /**
  * Emits through a virtual protocol-B touchscreen. Coordinates are converted from logical to the
- * panel's natural orientation; InputReader applies the display rotation itself.
+ * panel's natural orientation and to the area the display occupies on the panel (see
+ * [Screen.toPanel]); InputReader applies the display rotation and placement itself.
  */
 class UinputEmitter(private val screen: () -> Screen) : Emitter {
     override val name = "uinput"
@@ -217,9 +218,9 @@ class UinputEmitter(private val screen: () -> Screen) : Emitter {
 
     private fun position(s: Screen, c: PointerChange) {
         last[c.id] = c.x to c.y
-        val (nx, ny) = s.toNatural(c.x, c.y)
-        ev(Ev.ABS, Ev.ABS_MT_POSITION_X, scale(nx, s.naturalWidth))
-        ev(Ev.ABS, Ev.ABS_MT_POSITION_Y, scale(ny, s.naturalHeight))
+        val (px, py) = s.toPanel(c.x, c.y)
+        ev(Ev.ABS, Ev.ABS_MT_POSITION_X, scale(px, s.panelNaturalWidth))
+        ev(Ev.ABS, Ev.ABS_MT_POSITION_Y, scale(py, s.panelNaturalHeight))
     }
 
     private fun scale(v: Float, size: Int): Int = ((v / size.coerceAtLeast(1)) * (MAX + 1)).toInt().coerceIn(0, MAX)

@@ -3,13 +3,28 @@ package games.forgemaster.keymapper.core.engine
 import kotlinx.serialization.Serializable
 import kotlin.math.min
 
-/** Logical (rotated) display size in pixels and its rotation (0..3, Android Surface.ROTATION_*). */
+/**
+ * Logical (rotated) display size in pixels and its rotation (0..3, Android Surface.ROTATION_*).
+ *
+ * [panelWidth] x [panelHeight] is the physical panel in its natural orientation, when known (0: same
+ * as the logical size). They differ under a size override (`wm size`): Android then scales the
+ * logical display to fit the panel, centred, with black bars when the aspect ratio differs.
+ */
 @Serializable
-data class Screen(val width: Int, val height: Int, val rotation: Int = 0) {
+data class Screen(
+    val width: Int,
+    val height: Int,
+    val rotation: Int = 0,
+    val panelWidth: Int = 0,
+    val panelHeight: Int = 0,
+) {
     val shortSide: Int get() = min(width, height)
     /** Size of the display in its natural (rotation 0) orientation. */
     val naturalWidth: Int get() = if (rotation % 2 == 1) height else width
     val naturalHeight: Int get() = if (rotation % 2 == 1) width else height
+    /** Size of the physical panel in its natural orientation. */
+    val panelNaturalWidth: Int get() = if (panelWidth > 0 && panelHeight > 0) panelWidth else naturalWidth
+    val panelNaturalHeight: Int get() = if (panelWidth > 0 && panelHeight > 0) panelHeight else naturalHeight
 
     /**
      * Logical -> natural panel coordinates, the inverse of the rotation InputReader applies to an
@@ -20,6 +35,36 @@ data class Screen(val width: Int, val height: Int, val rotation: Int = 0) {
         2 -> (width - x) to (height - y)
         3 -> y to (width - x)
         else -> x to y
+    }
+
+    /**
+     * Logical -> natural panel coordinates: [toNatural], then where the logical display sits on the
+     * panel. A virtual touchscreen spans the whole panel, and InputReader maps the area the display
+     * occupies back to logical coordinates (touches on the black bars are dropped). The placement is
+     * LogicalDisplay.configureDisplayLocked's: scaled to fit, centred. Fitting is the same in the
+     * natural and the rotated orientation, so it is done in the natural one.
+     */
+    fun toPanel(x: Float, y: Float): Pair<Float, Float> {
+        val (nx, ny) = toNatural(x, y)
+        val lw = naturalWidth
+        val lh = naturalHeight
+        val pw = panelNaturalWidth
+        val ph = panelNaturalHeight
+        if ((pw == lw && ph == lh) || lw <= 0 || lh <= 0) return nx to ny
+        val rectWidth: Float
+        val rectHeight: Float
+        if (pw.toLong() * lh < ph.toLong() * lw) {
+            // Letterbox: the width fills the panel
+            rectWidth = pw.toFloat()
+            rectHeight = lh.toFloat() * pw / lw
+        } else {
+            // Pillarbox: the height fills the panel
+            rectWidth = lw.toFloat() * ph / lh
+            rectHeight = ph.toFloat()
+        }
+        val left = (pw - rectWidth) / 2
+        val top = (ph - rectHeight) / 2
+        return (left + nx * rectWidth / lw) to (top + ny * rectHeight / lh)
     }
 }
 

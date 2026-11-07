@@ -91,6 +91,33 @@ class TouchTest {
     }
 
     @Test
+    fun panelCoordinatesFollowTheSizeOverride() {
+        // No override: the panel is the display.
+        val plain = Screen(2400, 1080, 1, 1080, 2400)
+        assertEquals(plain.toNatural(50f, 100f), plain.toPanel(50f, 100f))
+        assertEquals(plain.toNatural(50f, 100f), Screen(2400, 1080, 1).toPanel(50f, 100f))
+
+        // `wm size 1080x1920` on a 1080x2400 panel, landscape: 1920x1080 shown at scale 1 between
+        // two 240 px bars (in the natural portrait orientation, above and below).
+        val s = Screen(1920, 1080, 1, 1080, 2400)
+        assertEquals(1080, s.panelNaturalWidth)
+        assertEquals(2400, s.panelNaturalHeight)
+        assertEquals(1080f to 240f, s.toPanel(0f, 0f)) // logical top-left
+        assertEquals(0f to 2160f, s.toPanel(1920f, 1080f)) // logical bottom-right
+        assertEquals(540f to 1200f, s.toPanel(960f, 540f)) // centre stays the centre
+
+        // Smaller override with the panel's aspect ratio (resolution setting): scaled, no bars.
+        val scaled = Screen(1800, 810, 1, 1080, 2400)
+        assertEquals(1080f to 0f, scaled.toPanel(0f, 0f))
+        assertEquals(540f to 1200f, scaled.toPanel(900f, 405f))
+
+        // Portrait 3:4 (rotation 0) on the 9:20 panel: bars above and below.
+        val r0 = Screen(1080, 1440, 0, 1080, 2400)
+        assertEquals(0f to 480f, r0.toPanel(0f, 0f))
+        assertEquals(1080f to 1920f, r0.toPanel(1080f, 1440f))
+    }
+
+    @Test
     fun stickResponse() {
         val r = StickResponse(deadzone = 0.1f, outer = 0.9f, curve = 2f, squareToCircle = false)
         assertEquals(Vec.ZERO, StickMath.apply(Vec(0.05f, 0.05f), r))

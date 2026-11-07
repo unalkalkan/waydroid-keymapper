@@ -18,10 +18,13 @@ internal object SystemProbe {
                 val info = dmg.javaClass.getMethod("getDisplayInfo", Int::class.javaPrimitiveType).invoke(dmg, 0)
                 if (info != null) {
                     val c = info.javaClass
+                    val (panelWidth, panelHeight) = panelSize(info)
                     return Screen(
                         c.getField("logicalWidth").getInt(info),
                         c.getField("logicalHeight").getInt(info),
                         c.getField("rotation").getInt(info),
+                        panelWidth,
+                        panelHeight,
                     )
                 }
             } catch (e: Throwable) {
@@ -30,6 +33,18 @@ internal object SystemProbe {
             }
         }
         return screenFromDumpsys()
+    }
+
+    /**
+     * The physical panel size in its natural orientation (the current display mode), or 0 x 0 when
+     * unknown. It differs from the logical size under `wm size`.
+     */
+    private fun panelSize(info: Any): Pair<Int, Int> = try {
+        val mode = info.javaClass.getMethod("getMode").invoke(info) as android.view.Display.Mode
+        mode.physicalWidth to mode.physicalHeight
+    } catch (e: Throwable) {
+        L.w("display mode query failed: $e")
+        0 to 0
     }
 
     private val displayInfoRe = Regex("""real (\d+) x (\d+).*?rotation (\d)""")
