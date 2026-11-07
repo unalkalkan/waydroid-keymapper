@@ -7,6 +7,7 @@ import games.forgemaster.keymapper.core.engine.PointerChange
 import games.forgemaster.keymapper.core.engine.Screen
 import games.forgemaster.keymapper.core.input.LogicalEvent
 import games.forgemaster.keymapper.core.model.Profile
+import games.forgemaster.keymapper.core.model.ProfileVariants
 import games.forgemaster.keymapper.core.model.sanitized
 import games.forgemaster.keymapper.core.protocol.ErrorMsg
 import games.forgemaster.keymapper.core.protocol.Frame
@@ -156,10 +157,14 @@ class Daemon(private val config: HelperConfig) : IpcServer.Dispatcher {
 
     private fun currentScreen(): Screen = overrideScreen ?: autoScreen ?: Screen(1280, 720)
 
-    /** Picks the profile (forced, else by foreground game), then decides mapping and grabbing. */
+    /**
+     * Picks the profile (forced, else by foreground game, then its variant for the screen's aspect
+     * ratio if any, see [ProfileVariants]), then decides mapping and grabbing.
+     */
     private fun reselect() {
         val t = now()
-        val target = forcedProfileId?.let(profiles::get) ?: foreground?.let(assignments::get)?.let(profiles::get)
+        val base = forcedProfileId?.let(profiles::get) ?: foreground?.let(assignments::get)?.let(profiles::get)
+        val target = ProfileVariants.resolve(base, profiles, engine.screen)
         if (target != engine.profile) engine.setProfile(target, t)
         val active = enabled && target != null && !monitorOn
         engine.setEnabled(active, t)
@@ -207,7 +212,7 @@ class Daemon(private val config: HelperConfig) : IpcServer.Dispatcher {
                             autoScreen = s
                             L.i("display changed: $s")
                             engine.setScreen(currentScreen(), now())
-                            publishStatus()
+                            reselect() // the aspect ratio may pick another profile variant
                         }
                     }
                     if (needForeground) {
@@ -278,7 +283,7 @@ class Daemon(private val config: HelperConfig) : IpcServer.Dispatcher {
                 post {
                     overrideScreen = m.screen?.takeIf { it.width in 1..16384 && it.height in 1..16384 }
                     engine.setScreen(currentScreen(), now())
-                    publishStatus()
+                    reselect()
                 }
             }
             MsgType.TOUCH -> {

@@ -144,6 +144,17 @@ adb logcat -s KmTouchTest                              # every MotionEvent the s
   right hits the turret, left wards (aimable), up quick-buys, down pings. L3 recalls; Start opens
   the shop. The game stops a drag ~8% of the screen height from the button, so aimed controls use
   a short `aimRadius`.
+- `wild-rift-16x9.json`: the same on a 16:9 screen (`wm size 1080x1920` on that phone, as the
+  scrcpy 16:9 setups do). Its id `wild-rift@16x9` makes it a screen variant (below). Measured from a
+  16:9 screenshot: the right-hand buttons, recall and the summoner spells keep their distance from
+  the right edge, the shop keeps its distance from the left edge, the joystick its fraction of the
+  width.
+
+Positions are fractions of the screen, but games lay out their HUD differently per aspect ratio, so
+a profile may have **screen variants**: a profile whose id is `<id>@<W>x<H>` (aspect ratio reduced,
+as the screen is oriented: `16x9`, `20x9`, `9x16`) replaces profile `<id>` while the screen has that
+shape, picked again whenever the display changes. Games stay assigned to the base profile; the
+status pill shows the variant's name.
 
 ## Status
 

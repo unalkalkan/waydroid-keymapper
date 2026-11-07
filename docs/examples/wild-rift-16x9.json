@@ -1,0 +1,42 @@
+{
+  "format": "keymapper-profile",
+  "profile": {
+    "id": "wild-rift@16x9",
+    "name": "Wild Rift 16:9",
+    "grab": true,
+    "phases": [
+      {
+        "name": "Battle",
+        "controls": [
+          {"type": "joystick", "id": "move", "x": 0.18, "y": 0.7176, "stick": "LEFT", "radius": 0.13},
+          {"type": "button", "id": "attack", "x": 0.8464, "y": 0.7963, "buttons": ["A"], "mode": "HOLD", "label": "Attack", "size": 0.095},
+          {"type": "button", "id": "ability1", "x": 0.6927, "y": 0.862, "buttons": ["X"], "mode": "HOLD", "label": "Ability 1", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.1, "aimMin": 0.035},
+          {"type": "button", "id": "ability2", "x": 0.7177, "y": 0.712, "buttons": ["Y"], "mode": "HOLD", "label": "Ability 2", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.1, "aimMin": 0.035},
+          {"type": "button", "id": "ability3", "x": 0.7687, "y": 0.5861, "buttons": ["B"], "mode": "HOLD", "label": "Ability 3", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.1, "aimMin": 0.035},
+          {"type": "button", "id": "ultimate", "x": 0.8495, "y": 0.5185, "buttons": ["R2"], "mode": "HOLD", "label": "Ultimate", "size": 0.055, "aim": "RIGHT", "aimRadius": 0.1, "aimMin": 0.035},
+          {"type": "button", "id": "level1", "x": 0.6447, "y": 0.7639, "buttons": ["L2", "X"], "mode": "TAP", "label": "Level 1", "size": 0.03},
+          {"type": "button", "id": "level2", "x": 0.6683, "y": 0.613, "buttons": ["L2", "Y"], "mode": "TAP", "label": "Level 2", "size": 0.03},
+          {"type": "button", "id": "level3", "x": 0.7214, "y": 0.4833, "buttons": ["L2", "B"], "mode": "TAP", "label": "Level 3", "size": 0.03},
+          {"type": "button", "id": "levelult", "x": 0.8021, "y": 0.4185, "buttons": ["L2", "R2"], "mode": "TAP", "label": "Level ult", "size": 0.03},
+          {"type": "button", "id": "spelld", "x": 0.513, "y": 0.8722, "buttons": ["L1"], "mode": "HOLD", "label": "Spell D", "size": 0.045, "aim": "RIGHT", "aimRadius": 0.09, "aimMin": 0.035},
+          {"type": "button", "id": "spellf", "x": 0.5875, "y": 0.8722, "buttons": ["R1"], "mode": "HOLD", "label": "Spell F", "size": 0.045, "aim": "RIGHT", "aimRadius": 0.09, "aimMin": 0.035},
+          {"type": "button", "id": "minion", "x": 0.7719, "y": 0.9241, "buttons": ["R3"], "mode": "HOLD", "label": "Minion", "size": 0.04},
+          {"type": "button", "id": "turret", "x": 0.8959, "y": 0.6389, "buttons": ["DPAD_RIGHT"], "mode": "HOLD", "label": "Turret", "size": 0.04},
+          {"type": "button", "id": "ward", "x": 0.8505, "y": 0.3315, "buttons": ["DPAD_LEFT"], "mode": "HOLD", "label": "Ward", "size": 0.045, "aim": "RIGHT", "aimRadius": 0.09, "aimMin": 0.035},
+          {"type": "button", "id": "quickbuy", "x": 0.1416, "y": 0.4028, "buttons": ["DPAD_UP"], "mode": "TAP", "label": "Quick buy", "size": 0.045},
+          {"type": "button", "id": "ping", "x": 0.9271, "y": 0.2426, "buttons": ["DPAD_DOWN"], "mode": "TAP", "label": "Ping !", "size": 0.032},
+          {"type": "button", "id": "recall", "x": 0.2411, "y": 0.875, "buttons": ["L3"], "mode": "TAP", "label": "Recall", "size": 0.045},
+          {"type": "button", "id": "shop", "x": 0.0808, "y": 0.4028, "buttons": ["START"], "mode": "TAP", "label": "Shop", "size": 0.045},
+          {"type": "phase", "id": "pause", "x": 0.9688, "y": 0.48, "buttons": ["SELECT"], "action": "NEXT"}
+        ]
+      },
+      {
+        "name": "Paused",
+        "controls": [
+          {"type": "phase", "id": "resume", "x": 0.9688, "y": 0.48, "buttons": ["SELECT"], "action": "NEXT"}
+        ]
+      }
+    ]
+  },
+  "games": ["com.riotgames.league.wildrift"]
+}

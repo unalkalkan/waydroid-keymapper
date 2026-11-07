@@ -78,7 +78,9 @@ The root activator in the app writes the same file through `su`'s stdin.
 ## Semantics
 
 - The helper keeps profiles in memory only. It picks the forced profile if one is set, else the
-  profile assigned to the current foreground package, else none.
+  profile assigned to the current foreground package, else none. A profile with the id
+  `<id>@<W>x<H>` then replaces profile `<id>` while the logical screen has the aspect ratio W:H
+  (`ProfileVariants`); the choice is made again whenever the display changes.
 - Mapping is active when enabled, a profile is selected and no client is monitoring. Controllers are
   grabbed (`EVIOCGRAB`) while mapping with a profile that has `grab: true`, or while monitoring.
 - Engine pointer ids are 0–9; manual `TOUCH` fingers use 10–15.
