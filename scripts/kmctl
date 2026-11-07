@@ -8,8 +8,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DIR=/data/local/tmp/keymapper
-ADB=${ADB:-$(command -v adb || true)}
-[ -x "${ADB:-}" ] || ADB="$ROOT/.sdk/platform-tools/adb"
+. "$ROOT/scripts/lib/adb.sh"
 A=("$ADB")
 [ -n "${ANDROID_SERIAL:-}" ] && A+=(-s "$ANDROID_SERIAL")
 if [ "${1:-}" = load ] && [ -f "${2:-}" ]; then

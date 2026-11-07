@@ -138,8 +138,8 @@ fun HomeScreen(modifier: Modifier, snackbar: SnackbarHostState) {
             SectionCard("Start the helper") {
                 Text("From your PC, in the keymapper repo (installs the app, pairs, pushes and starts the helper):")
                 CommandLine("./scripts/deploy.sh")
-                Text("Later restarts only need:")
-                CommandLine("adb shell sh /data/local/tmp/keymapper/ctl.sh start")
+                Text("After that, turn it on and off from the PC (also after a reboot):")
+                CommandLine("./scripts/km on")
                 if (RootActivator.hasSu()) {
                     Button(
                         enabled = !rootRunning,

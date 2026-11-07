@@ -21,6 +21,10 @@ import games.forgemaster.keymapper.helper.HelperPaths
  * `call("connect")` is how the helper reaches the app on stock Android, where SELinux lets an app use
  * a socket owned by adb shell but not connect to one: the helper passes one end of a connected socket
  * pair and the app runs the usual key handshake over it. Also shell/root only.
+ *
+ * `call("enable")` turns the Mapping switch on for `scripts/km on`; calling the provider also starts
+ * the app's process if it isn't running. Shell/root only. Returns ok=false while the process is
+ * still starting, so the caller asks again.
  */
 class PairingProvider : ContentProvider() {
     override fun onCreate(): Boolean = true
@@ -41,8 +45,13 @@ class PairingProvider : ContentProvider() {
         }
     }
 
-    override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
-        if (method != HelperPaths.CONNECT_METHOD) return super.call(method, arg, extras)
+    override fun call(method: String, arg: String?, extras: Bundle?): Bundle? = when (method) {
+        HelperPaths.CONNECT_METHOD -> connect(extras)
+        METHOD_ENABLE -> enable()
+        else -> super.call(method, arg, extras)
+    }
+
+    private fun connect(extras: Bundle?): Bundle {
         requireShellOrRoot()
         val fd = extras?.let {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -58,6 +67,13 @@ class PairingProvider : ContentProvider() {
         } else {
             graph.helper.offer(fd)
         }
+        return Bundle().apply { putBoolean(HelperPaths.CONNECT_EXTRA_OK, graph != null) }
+    }
+
+    private fun enable(): Bundle {
+        requireShellOrRoot()
+        val graph = context?.let { KeymapperApp.graphOrNull(it) }
+        graph?.settings?.setMappingEnabled(true)
         return Bundle().apply { putBoolean(HelperPaths.CONNECT_EXTRA_OK, graph != null) }
     }
 
@@ -80,5 +96,6 @@ class PairingProvider : ContentProvider() {
 
     private companion object {
         const val SHELL_APP_ID = 2000
+        const val METHOD_ENABLE = "enable"
     }
 }

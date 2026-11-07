@@ -37,8 +37,7 @@ while [ $# -gt 0 ]; do
 done
 case "$BACKEND" in auto|uinput|inputmanager) ;; *) echo "bad --backend $BACKEND" >&2; exit 64 ;; esac
 
-ADB=${ADB:-$(command -v adb || true)}
-[ -x "${ADB:-}" ] || ADB="$ROOT/.sdk/platform-tools/adb"
+. "$ROOT/scripts/lib/adb.sh"
 [ -x "$ADB" ] || { echo "adb not found (set ADB=...)" >&2; exit 1; }
 A=("$ADB")
 [ -n "$SERIAL" ] && A+=(-s "$SERIAL")

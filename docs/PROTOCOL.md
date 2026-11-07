@@ -19,6 +19,9 @@ else, on purpose.
   `games.forgemaster.keymapper.pairing`, after checking that provider belongs to the paired uid. The
   provider accepts only uid 0/2000 callers and answers `{ok: false}` while the app is still
   starting. The same handshake follows. The helper never starts the app to do this.
+- The same provider takes `call("enable")` from uid 0/2000 (`scripts/km on`, via `adb shell content
+  call`): it switches the app's Mapping setting on and answers `{ok: true}`, or `{ok: false}` while
+  the app is still starting. Being a provider call, it also starts the app's process.
 
 ## Frames
 

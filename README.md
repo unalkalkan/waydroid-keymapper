@@ -44,8 +44,22 @@ export ANDROID_SERIAL=<ip>:5555
 ```
 
 Re-run `deploy.sh` after each app update (the helper version is shown on the Status screen) and after
-"New pairing key". After a device reboot: `adb shell sh /data/local/tmp/keymapper/ctl.sh start`.
-With root, the Status screen's "Start with root" does the same from the device.
+"New pairing key". With root, the Status screen's "Start with root" starts the helper from the device.
+
+Day to day, after one `deploy.sh` per device, `km` turns everything on and off from the PC, also
+after a reboot:
+
+```sh
+./scripts/km on [phone|waydroid|SERIAL]     # start the helper, switch mapping on, wake the app
+./scripts/km off [phone|waydroid|SERIAL]    # stop the helper (fingers lifted, pads released), close the app
+./scripts/km status [phone|waydroid|SERIAL]
+```
+
+`waydroid` connects adb to the running Waydroid session; `phone` is the one other attached device;
+with a single device attached the name can be left out. If Waydroid shows up as `unauthorized`,
+Android has dropped the PC's adb key (keys expire after 7 days unused): open Waydroid's UI, run `km`
+again and allow the prompt. All the scripts use the binary of the adb server that is already
+running, because a client from another platform-tools release restarts the server and drops scrcpy.
 
 In the app:
 

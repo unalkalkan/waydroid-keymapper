@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# Turns the keymapper on or off on a device from this computer.
+#
+#   scripts/km on|off|status [phone|waydroid|SERIAL]
+#
+#   on      start the helper, switch mapping on and wake the app so it connects (the HUD follows
+#           the app's own setting). Safe to repeat: whatever is already on is left alone.
+#   off     stop the helper (lifts held fingers, releases the pads, removes the virtual
+#           touchscreen), then close the app along with its HUD and notification.
+#   status  helper, app and mapping state.
+#
+#   Device: "waydroid" (connects adb to the running Waydroid session), "phone" (the one attached
+#   device that isn't Waydroid), a serial, or nothing ($ANDROID_SERIAL, else the only device
+#   attached). Each device needs one scripts/deploy.sh first; after that on/off is enough, also
+#   after a reboot.
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+DIR=/data/local/tmp/keymapper
+PKG=games.forgemaster.keymapper
+CLI=games.forgemaster.keymapper.helper.Cli
+. "$ROOT/scripts/lib/adb.sh"
+
+usage() { sed -n '4,15p' "$0" | sed 's/^# \{0,1\}//'; exit 64; }
+die() { echo "km: $*" >&2; exit 1; }
+
+CMD=${1:-}
+TARGET=${2:-}
+case "$CMD" in on|off|status) ;; *) usage ;; esac
+[ $# -le 2 ] || usage
+[ -x "$ADB" ] || die "adb not found (set ADB=...)"
+
+# Serials of devices that are online.
+attached() { "$ADB" devices | sed -n '2,$ s/^\([^[:space:]]*\)[[:space:]][[:space:]]*device$/\1/p'; }
+
+waydroid_ip() {
+    command -v waydroid >/dev/null || return 1
+    local st
+    st=$(waydroid status 2>/dev/null) || return 1
+    printf '%s\n' "$st" | grep -q '^Session:[[:space:]]*RUNNING' || return 1
+    printf '%s\n' "$st" | sed -n 's/^IP address:[[:space:]]*\([0-9][0-9.]*\)$/\1/p' | head -n1 | grep .
+}
+
+connect_waydroid() {
+    local ip
+    ip=$(waydroid_ip) || die "Waydroid isn't running (or still booting); start it (e.g. waydroid show-full-ui) and retry"
+    SERIAL="$ip:5555"
+    attached | grep -qxF "$SERIAL" && return 0
+    "$ADB" connect "$SERIAL" >/dev/null || true
+    if "$ADB" devices | grep -q "^$SERIAL[[:space:]][[:space:]]*unauthorized"; then
+        die "Waydroid doesn't accept this computer's adb key (Android drops keys after 7 days unused).
+    Open Waydroid (waydroid show-full-ui), run km again and tick \"Always allow\" in the debugging
+    prompt; Developer options > \"Disable adb authorization timeout\" keeps it from expiring."
+    fi
+    timeout 15 "$ADB" -s "$SERIAL" wait-for-device 2>/dev/null || die "adb can't reach Waydroid at $SERIAL"
+}
+
+resolve() {
+    local all n wd
+    case "$TARGET" in
+        waydroid) connect_waydroid ;;
+        phone)
+            wd=$(waydroid_ip || true)
+            all=$(attached | grep -vxF "${wd:-none}:5555" || true)
+            n=$(printf '%s' "$all" | grep -c . || true)
+            [ "$n" -ge 1 ] || die "no phone attached (check the cable and adb devices)"
+            [ "$n" -eq 1 ] || die "more than one phone attached; name one: $(echo $all)"
+            SERIAL=$all ;;
+        "")
+            if [ -n "${ANDROID_SERIAL:-}" ]; then
+                SERIAL=$ANDROID_SERIAL
+                return
+            fi
+            all=$(attached)
+            n=$(printf '%s' "$all" | grep -c . || true)
+            if [ "$n" -eq 1 ]; then
+                SERIAL=$all
+            elif [ "$n" -gt 1 ]; then
+                die "more than one device; say which: phone, waydroid or one of: $(echo $all)"
+            elif waydroid_ip >/dev/null; then
+                connect_waydroid
+            else
+                die "no device attached"
+            fi ;;
+        *) SERIAL=$TARGET ;;
+    esac
+    [ "$("$ADB" -s "$SERIAL" get-state 2>/dev/null)" = device ] || die "$SERIAL is not attached (adb devices)"
+}
+
+dsh() { "$ADB" -s "$SERIAL" shell "$@" | tr -d '\r'; }
+
+deployed() { [ "$(dsh "[ -f $DIR/ctl.sh ] && echo yes" 2>/dev/null)" = yes ]; }
+
+need_deployed() {
+    dsh pm path "$PKG" 2>/dev/null | grep -q '^package:' ||
+        die "the keymapper app isn't installed on $SERIAL; run: scripts/deploy.sh -s $SERIAL"
+    deployed || die "the helper isn't deployed on $SERIAL; run: scripts/deploy.sh -s $SERIAL"
+}
+
+cli_status() { dsh "CLASSPATH=$DIR/helper.apk app_process /system/bin $CLI status" 2>/dev/null || true; }
+
+# Prints the interesting parts of the helper's status JSON ($1). The CLI's own connection counts as
+# one client, so the app is connected when there are two or more.
+show() {
+    python3 - "$1" <<'PY' || echo "state:    unknown (no status from the helper)"
+import json, sys
+try:
+    s = json.loads(sys.argv[1])
+except ValueError:
+    sys.exit(1)
+fg = s.get("foreground") or "unknown"
+pads = [c["name"] for c in s.get("controllers", [])]
+print("app:      " + ("connected" if s.get("clients", 0) >= 2 else "not connected"))
+print("mapping:  " + ("on" if s.get("enabled") else "paused (the app's Mapping switch is off)"))
+if s.get("mapping") and s.get("profileName"):
+    print("active:   {} on {}".format(s["profileName"], fg))
+else:
+    print("active:   nothing, waiting for a game with a profile (in front: {})".format(fg))
+print("pads:     " + (", ".join(pads) if pads else "none"))
+PY
+}
+
+app_ready() {
+    printf '%s' "$1" | python3 -c '
+import json, sys
+s = json.load(sys.stdin)
+sys.exit(0 if s.get("clients", 0) >= 2 and s.get("enabled") else 1)' 2>/dev/null
+}
+
+# App builds without the provider's "enable" call: flip the saved switch with run-as (debug builds
+# only). The app writes its own value back while it runs, so it is stopped first.
+enable_mapping_legacy() {
+    local prefs
+    prefs=$(dsh "run-as $PKG cat shared_prefs/settings.xml" 2>/dev/null || true)
+    case "$prefs" in
+        *'name="mapping_enabled" value="false"'*)
+            dsh am force-stop "$PKG"
+            dsh "run-as $PKG sed -i 's/name=\"mapping_enabled\" value=\"false\"/name=\"mapping_enabled\" value=\"true\"/' shared_prefs/settings.xml"
+            echo "mapping switch turned on (app restarted)" ;;
+    esac
+    # Any provider access starts the app's process; the output (the pairing row) is not needed.
+    dsh content query --uri "content://$PKG.pairing/config" >/dev/null 2>&1 || true
+}
+
+# Turns the Mapping switch on; the provider call also starts the app if it isn't running.
+enable_mapping() {
+    local r i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        r=$(dsh content call --uri "content://$PKG.pairing" --method enable 2>&1 || true)
+        case "$r" in
+            *ok=true*) return 0 ;;
+            *ok=false*) sleep 0.5 ;; # the app's process is still starting
+            *) break ;;              # an older app build without "enable"
+        esac
+    done
+    enable_mapping_legacy
+}
+
+helper_line() { sed -n 's/^keymapper: //p' | head -n1; }
+
+do_on() {
+    need_deployed
+    local out json i
+    out=$(dsh sh "$DIR/ctl.sh" start || true)
+    case "$out" in
+        *"running (pid"*|*"started (pid"*) echo "helper:   $(printf '%s\n' "$out" | helper_line)" ;;
+        *) printf '%s\n' "$out" >&2; die "the helper didn't start" ;;
+    esac
+    enable_mapping
+    json=
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+        json=$(cli_status)
+        app_ready "$json" && break
+        sleep 0.5
+    done
+    show "$json"
+    if ! app_ready "$json"; then
+        echo "km: the app hasn't connected (or mapping is still paused); open the keymapper app and check its Home tab" >&2
+        exit 1
+    fi
+}
+
+do_off() {
+    if deployed; then
+        echo "helper:   $(dsh sh "$DIR/ctl.sh" stop | helper_line)"
+    else
+        echo "helper:   not deployed"
+    fi
+    dsh am force-stop "$PKG"
+    echo "app:      closed"
+}
+
+do_status() {
+    if ! deployed; then
+        echo "helper:   not deployed (scripts/deploy.sh -s $SERIAL)"
+        return
+    fi
+    local out
+    out=$(dsh sh "$DIR/ctl.sh" status 2>/dev/null || true)
+    echo "helper:   $(printf '%s\n' "$out" | helper_line)"
+    case "$out" in
+        *"running (pid"*) show "$(cli_status)" ;;
+        *) echo "app:      $(dsh pidof "$PKG" >/dev/null 2>&1 && echo running || echo closed)" ;;
+    esac
+}
+
+resolve
+echo "device:   $SERIAL ($(dsh getprop ro.product.model))"
+case "$CMD" in
+    on) do_on ;;
+    off) do_off ;;
+    status) do_status ;;
+esac

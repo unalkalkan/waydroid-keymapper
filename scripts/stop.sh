@@ -12,8 +12,7 @@ while [ $# -gt 0 ]; do
         *) echo "unknown option $1" >&2; exit 64 ;;
     esac
 done
-ADB=${ADB:-$(command -v adb || true)}
-[ -x "${ADB:-}" ] || ADB="$ROOT/.sdk/platform-tools/adb"
+. "$ROOT/scripts/lib/adb.sh"
 A=("$ADB")
 [ -n "$SERIAL" ] && A+=(-s "$SERIAL")
 "${A[@]}" shell "sh /data/local/tmp/keymapper/ctl.sh $CMD" | tr -d '\r'
