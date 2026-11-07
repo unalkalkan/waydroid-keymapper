@@ -138,9 +138,9 @@ adb logcat -s KmTouchTest                              # every MotionEvent the s
   Hypercharge; Start opens quick chat. Aimed controls use `aimMin`, because Brawl Stars treats a
   drag under ~5% of the screen height as a tap and fires auto-aimed.
 - `wild-rift.json`: League of Legends: Wild Rift, default HUD on a 2400x1080 phone, laid out like
-  the Mobile Legends profile. Left stick moves; A attacks; X/Y/B cast abilities 1-3 and RB the
-  ultimate (hold, aim with the right stick, release to fire; tap for a quick cast); LT + X/Y/B/RB
-  levels that ability up. LB/RT cast summoner spells D/F (aimable). R3 last-hits a minion; D-pad
+  the Mobile Legends profile. Left stick moves; A attacks; X/Y/B cast abilities 1-3 and RT the
+  ultimate (hold, aim with the right stick, release to fire; tap for a quick cast); LT + X/Y/B/RT
+  levels that ability up. LB/RB cast summoner spells D/F (aimable). R3 last-hits a minion; D-pad
   right hits the turret, left wards (aimable), up quick-buys, down pings. L3 recalls; Start opens
   the shop. The game stops a drag ~8% of the screen height from the button, so aimed controls use
   a short `aimRadius`.
